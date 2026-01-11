@@ -46,6 +46,48 @@ app.get('/api/logs', (req, res) => {
 });
 
 /**
+ * POST /api/logs
+ * 봇 실행 로그 추가
+ */
+app.post('/api/logs', (req, res) => {
+  try {
+    const logEntry = req.body;
+    
+    // 로그 파일 읽기
+    let logs = [];
+    if (fs.existsSync(LOG_PATH)) {
+      let content = fs.readFileSync(LOG_PATH, 'utf8');
+      if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+      }
+      logs = JSON.parse(content);
+    }
+    
+    // 새 로그 추가 (최신이 맨 앞)
+    logs.unshift(logEntry);
+    
+    // 최대 1000개 유지
+    if (logs.length > 1000) {
+      logs = logs.slice(0, 1000);
+    }
+    
+    // 로그 파일 쓰기
+    const logDir = path.dirname(LOG_PATH);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    fs.writeFileSync(LOG_PATH, JSON.stringify(logs, null, 2), 'utf8');
+    
+    console.log(`📝 Log added: ${logEntry.botName} - ${logEntry.status}`);
+    res.json({ success: true, message: 'Log added' });
+    
+  } catch (e) {
+    console.error('로그 추가 실패:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
  * GET /api/logs/:botId
  * 특정 봇의 로그만 조회
  */
